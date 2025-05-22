@@ -42,7 +42,8 @@ impl PluginCommand for TodoList {
             .into_iter()
             .filter(|t| if show_all { true } else { !t.completed })
         {
-            println!("{}", todo);
+            let content = format!("{}", todo);
+            println!("{}", content.trim());
         }
         Ok(PipelineData::Empty)
     }

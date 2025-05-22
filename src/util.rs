@@ -44,7 +44,7 @@ pub fn value_from_json(item: &JsonValue, span: nu_protocol::Span) -> Value {
                 Value::int(number.as_i64().expect("number should be integer"), span)
             }
         }
-        JsonValue::String(string) => Value::string(string, span),
+        JsonValue::String(string) => Value::string(string.trim(), span),
         JsonValue::Object(map) => {
             let mut rec = nu_protocol::Record::new();
             for (key, value) in map {

@@ -42,5 +42,5 @@ impl PluginCommand for TodoTable {
 /// Read the todo.txt file specified in the call and return it as a nu table
 pub fn open_todo_file_as_table(call: &EvaluatedCall) -> Result<PipelineData, LabeledError> {
     let todo_file = get_todo_file_contents(call)?;
-    Ok(value_from_json(&todo_file.as_json(), call.head)).map(|x| x.into_pipeline_data())
+    Ok(value_from_json(&todo_file.as_json(), call.head).into_pipeline_data())
 }
