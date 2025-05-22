@@ -1,5 +1,6 @@
 use nu_plugin::PluginCommand;
 use nu_protocol::{PipelineData, Type};
+use todo_txt::task::Simple;
 
 use crate::{TodoTxtPlugin, util::get_todo_file_contents};
 
@@ -37,13 +38,12 @@ impl PluginCommand for TodoList {
         _input: PipelineData,
     ) -> Result<PipelineData, nu_protocol::LabeledError> {
         let show_all = call.has_flag("all")?;
-        let todo_file = get_todo_file_contents(call)?;
-        for todo in todo_file
-            .into_iter()
-            .filter(|t| if show_all { true } else { !t.completed })
-        {
-            let content = format!("{}", todo);
-            println!("{}", content.trim());
+        let todo_file = get_todo_file_contents::<Simple>(call)?;
+
+        for task in todo_file.tasks {
+            if show_all || !task.finished {
+                println!("{}", task);
+            }
         }
         Ok(PipelineData::Empty)
     }

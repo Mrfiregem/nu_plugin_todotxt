@@ -2,6 +2,8 @@ use crate::TodoTxtPlugin;
 use crate::util::{get_todo_file_contents, value_from_json};
 use nu_plugin::{EvaluatedCall, PluginCommand};
 use nu_protocol::{IntoPipelineData, LabeledError, PipelineData, Type};
+use serde_json::json;
+use todo_txt::task::Simple;
 
 pub struct TodoTable;
 
@@ -41,6 +43,7 @@ impl PluginCommand for TodoTable {
 
 /// Read the todo.txt file specified in the call and return it as a nu table
 pub fn open_todo_file_as_table(call: &EvaluatedCall) -> Result<PipelineData, LabeledError> {
-    let todo_file = get_todo_file_contents(call)?;
-    Ok(value_from_json(&todo_file.as_json(), call.head).into_pipeline_data())
+    let todo_file = get_todo_file_contents::<Simple>(call)?;
+    let json_rep = json!(todo_file.tasks);
+    Ok(value_from_json(&json_rep, call.head).into_pipeline_data())
 }

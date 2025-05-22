@@ -1,8 +1,8 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
-use libdonow::file::TodoFile;
 use nu_protocol::{LabeledError, Value};
 use serde_json::Value as JsonValue;
+use todo_txt::{Task, task::List};
 
 /// Get the path to the user's todo.txt file
 pub fn get_todo_file_path(call: &nu_plugin::EvaluatedCall) -> Result<PathBuf, LabeledError> {
@@ -18,7 +18,10 @@ pub fn get_todo_file_path(call: &nu_plugin::EvaluatedCall) -> Result<PathBuf, La
 }
 
 /// Read the todo.txt file specified in the call and return it as a JSON object
-pub fn get_todo_file_contents(call: &nu_plugin::EvaluatedCall) -> Result<TodoFile, LabeledError> {
+pub fn get_todo_file_contents<T>(call: &nu_plugin::EvaluatedCall) -> Result<List<T>, LabeledError>
+where
+    T: Task,
+{
     let file_path = get_todo_file_path(call)?;
 
     // If the file doesn't exist, create it
@@ -29,7 +32,11 @@ pub fn get_todo_file_contents(call: &nu_plugin::EvaluatedCall) -> Result<TodoFil
         })?;
     }
 
-    Ok(TodoFile::new(&file_path.to_string_lossy()))
+    let contents = std::fs::read_to_string(file_path)
+        .map_err(|e| LabeledError::new(format!("Error readinf file: {e}")))?;
+
+    todo_txt::task::List::from_str(&contents)
+        .map_err(|_| LabeledError::new("failed to parse todo.txt file contents"))
 }
 
 /// Convert a serde_json::Value to a nu_protocol::Value

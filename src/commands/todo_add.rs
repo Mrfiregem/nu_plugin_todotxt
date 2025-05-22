@@ -1,8 +1,14 @@
-use libdonow::parser::Todo;
+use std::io::Write;
+use std::{fs::OpenOptions, str::FromStr};
+
 use nu_plugin::PluginCommand;
 use nu_protocol::{LabeledError, PipelineData, SyntaxShape, Type};
+use todo_txt::task::Simple;
 
-use crate::{TodoTxtPlugin, util::get_todo_file_contents};
+use crate::{
+    TodoTxtPlugin,
+    util::{get_todo_file_contents, get_todo_file_path},
+};
 
 pub struct TodoAdd;
 
@@ -79,13 +85,29 @@ impl PluginCommand for TodoAdd {
         todo_str.push_str(&desc);
 
         // Create todo item from string
-        let new_todo_item = Todo::parse(&todo_str)
-            .map_err(|e| LabeledError::new(format!("Error creating todo item: {:?}", e)))?;
+        let new_todo_item = todo_txt::task::Simple::from_str(&todo_str)
+            .map_err(|_| LabeledError::new("Unable to init new task object"))?;
 
-        let mut todo_table = get_todo_file_contents(call)?;
-        todo_table.add(new_todo_item);
+        let mut todo_table = get_todo_file_contents::<Simple>(call)?;
+        todo_table.push(new_todo_item);
 
-        todo_table.save();
+        let file_path = get_todo_file_path(call)?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .open(file_path)
+            .map_err(|e| LabeledError::new(format!("Error opening todo file for writing: {e}")))?;
+
+        for task in todo_table.tasks {
+            match writeln!(file, "{}", task) {
+                Ok(_) => {}
+                Err(e) => {
+                    return Err(LabeledError::new(format!(
+                        "Error writing task to file: {e}"
+                    )));
+                }
+            };
+        }
+
         Ok(PipelineData::Empty)
     }
 }
