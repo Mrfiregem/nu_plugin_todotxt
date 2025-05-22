@@ -1,9 +1,7 @@
-use nu_plugin::{EngineInterface, EvaluatedCall, PluginCommand};
-use nu_protocol::{Category, IntoPipelineData, LabeledError, PipelineData, SyntaxShape, Type};
-
 use crate::TodoTxtPlugin;
-
-use super::{get_todo_file_as_json, value_from_json};
+use crate::util::{get_todo_file_contents, value_from_json};
+use nu_plugin::{EvaluatedCall, PluginCommand};
+use nu_protocol::{IntoPipelineData, LabeledError, PipelineData, Type};
 
 pub struct TodoTable;
 
@@ -19,11 +17,11 @@ impl PluginCommand for TodoTable {
             .input_output_type(Type::Nothing, Type::table())
             .named(
                 "file",
-                SyntaxShape::Filepath,
+                nu_protocol::SyntaxShape::Filepath,
                 "path to your todo.txt file (default: ~/.todo.txt)",
                 Some('f'),
             )
-            .category(Category::Custom("todo.txt".into()))
+            .category(nu_protocol::Category::Custom("todo.txt".into()))
     }
 
     fn description(&self) -> &str {
@@ -33,7 +31,7 @@ impl PluginCommand for TodoTable {
     fn run(
         &self,
         _plugin: &TodoTxtPlugin,
-        _engine: &EngineInterface,
+        _engine: &nu_plugin::EngineInterface,
         call: &EvaluatedCall,
         _input: PipelineData,
     ) -> Result<PipelineData, LabeledError> {
@@ -43,6 +41,6 @@ impl PluginCommand for TodoTable {
 
 /// Read the todo.txt file specified in the call and return it as a nu table
 pub fn open_todo_file_as_table(call: &EvaluatedCall) -> Result<PipelineData, LabeledError> {
-    let todo_file = get_todo_file_as_json(call)?;
-    Ok(value_from_json(&todo_file, call.head)).map(|x| x.into_pipeline_data())
+    let todo_file = get_todo_file_contents(call)?;
+    Ok(value_from_json(&todo_file.as_json(), call.head)).map(|x| x.into_pipeline_data())
 }
