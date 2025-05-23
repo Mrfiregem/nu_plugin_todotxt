@@ -5,6 +5,7 @@ use nu_plugin::PluginCommand;
 use nu_protocol::{LabeledError, PipelineData, SyntaxShape, Type};
 use todo_txt::task::Simple;
 
+use crate::error::TodoPluginError;
 use crate::{
     TodoTxtPlugin,
     util::{get_todo_file_contents, get_todo_file_path},
@@ -55,38 +56,9 @@ impl PluginCommand for TodoAdd {
         call: &nu_plugin::EvaluatedCall,
         _input: PipelineData,
     ) -> Result<PipelineData, nu_protocol::LabeledError> {
-        let desc = call.req::<String>(0)?;
-        let complete = call.has_flag("complete")?;
-        let no_date = call.has_flag("no-date")?;
-        let priority = call
-            .get_flag::<String>("priority")?
-            .and_then(|s| s.chars().nth(0));
-
-        // Build the todo item string
-        let mut todo_str = String::new();
-        if complete {
-            todo_str.push_str("x ");
-        }
-        if let Some(prio) = priority {
-            let prio = match prio.to_ascii_uppercase() {
-                c if c.is_ascii_alphabetic() => c,
-                e => return Err(LabeledError::new(format!("unknown priority: {}", e))),
-            };
-            todo_str.push_str(&format!("({prio}) "));
-        }
-        if !no_date {
-            let today = chrono::Local::now().format("%F");
-            if complete {
-                todo_str.push_str(&format!("{today} {today} "));
-            } else {
-                todo_str.push_str(&format!("{today} "));
-            }
-        }
-        todo_str.push_str(&desc);
-
         // Create todo item from string
-        let new_todo_item = todo_txt::task::Simple::from_str(&todo_str)
-            .map_err(|_| LabeledError::new("Unable to init new task object"))?;
+        let task_str = build_task_string(call)?;
+        let new_todo_item = Simple::from_str(&task_str).expect("reached infallable code");
 
         let mut todo_table = get_todo_file_contents::<Simple>(call)?;
         todo_table.push(new_todo_item);
@@ -98,16 +70,44 @@ impl PluginCommand for TodoAdd {
             .map_err(|e| LabeledError::new(format!("Error opening todo file for writing: {e}")))?;
 
         for task in todo_table.tasks {
-            match writeln!(file, "{}", task) {
-                Ok(_) => {}
-                Err(e) => {
-                    return Err(LabeledError::new(format!(
-                        "Error writing task to file: {e}"
-                    )));
-                }
-            };
+            writeln!(file, "{}", task).map_err(TodoPluginError::from)?;
         }
 
         Ok(PipelineData::Empty)
     }
+}
+
+fn build_task_string(call: &nu_plugin::EvaluatedCall) -> Result<String, LabeledError> {
+    let desc = call.req::<String>(0)?;
+    let complete = call.has_flag("complete")?;
+    let no_date = call.has_flag("no-date")?;
+    let priority = call
+        .get_flag::<String>("priority")?
+        .and_then(|s| s.chars().next());
+
+    // Build the todo item string
+    let mut todo_str = String::new();
+    if complete {
+        todo_str.push_str("x ");
+    }
+    if let Some(prio) = priority {
+        let prio = match prio.to_ascii_uppercase() {
+            c if c.is_ascii_alphabetic() => c,
+            e => {
+                return Err(LabeledError::new(format!("unknown priority: {}", e))
+                    .with_code("todotxt::error::add::unknown_priority"));
+            }
+        };
+        todo_str.push_str(&format!("({prio}) "));
+    }
+    if !no_date {
+        let today = chrono::Local::now().format("%F");
+        if complete {
+            todo_str.push_str(&format!("{today} {today} "));
+        } else {
+            todo_str.push_str(&format!("{today} "));
+        }
+    }
+    todo_str.push_str(&desc);
+    Ok(todo_str)
 }
