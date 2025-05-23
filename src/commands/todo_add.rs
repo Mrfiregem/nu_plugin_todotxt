@@ -1,15 +1,11 @@
-use std::io::Write;
-use std::{fs::OpenOptions, str::FromStr};
+use std::str::FromStr;
 
 use nu_plugin::PluginCommand;
 use nu_protocol::{LabeledError, PipelineData, SyntaxShape, Type};
 use todo_txt::task::Simple;
 
-use crate::error::TodoPluginError;
-use crate::{
-    TodoTxtPlugin,
-    util::{get_todo_file_contents, get_todo_file_path},
-};
+use crate::util::write_tasks_to_disk;
+use crate::{TodoTxtPlugin, util::get_todo_file_contents};
 
 pub struct TodoAdd;
 
@@ -34,7 +30,7 @@ impl PluginCommand for TodoAdd {
             .switch(
                 "no-date",
                 "don't add creation and/or completion date to item",
-                Some('D'),
+                Some('d'),
             )
             .named(
                 "priority",
@@ -55,23 +51,15 @@ impl PluginCommand for TodoAdd {
         _engine: &nu_plugin::EngineInterface,
         call: &nu_plugin::EvaluatedCall,
         _input: PipelineData,
-    ) -> Result<PipelineData, nu_protocol::LabeledError> {
+    ) -> Result<PipelineData, LabeledError> {
         // Create todo item from string
         let task_str = build_task_string(call)?;
-        let new_todo_item = Simple::from_str(&task_str).expect("reached infallable code");
+        let new_task = Simple::from_str(&task_str).expect("reached infallable code");
 
-        let mut todo_table = get_todo_file_contents::<Simple>(call)?;
-        todo_table.push(new_todo_item);
+        let mut task_list = get_todo_file_contents::<Simple>(call)?;
+        task_list.push(new_task);
 
-        let file_path = get_todo_file_path(call)?;
-        let mut file = OpenOptions::new()
-            .write(true)
-            .open(file_path)
-            .map_err(|e| LabeledError::new(format!("Error opening todo file for writing: {e}")))?;
-
-        for task in todo_table.tasks {
-            writeln!(file, "{}", task).map_err(TodoPluginError::from)?;
-        }
+        write_tasks_to_disk(call, task_list)?;
 
         Ok(PipelineData::Empty)
     }

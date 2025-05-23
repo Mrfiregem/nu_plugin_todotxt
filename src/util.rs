@@ -1,3 +1,5 @@
+use std::fmt::Display;
+use std::io::Write;
 use std::{path::PathBuf, str::FromStr};
 
 use nu_plugin::EvaluatedCall;
@@ -59,4 +61,22 @@ pub fn value_from_json(item: &JsonValue, span: nu_protocol::Span) -> Value {
             span,
         ),
     }
+}
+
+/// Given a list of tasks, write to todo.txt file
+pub fn write_tasks_to_disk<T>(
+    call: &EvaluatedCall,
+    task_list: List<T>,
+) -> Result<(), TodoPluginError>
+where
+    T: Task + Display,
+{
+    let file_path = get_todo_file_path(call)?;
+    let mut file = std::fs::OpenOptions::new().write(true).open(file_path)?;
+
+    for task in task_list.tasks {
+        writeln!(file, "{}", task).map_err(TodoPluginError::from)?;
+    }
+
+    Ok(())
 }
