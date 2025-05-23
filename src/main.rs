@@ -18,6 +18,7 @@ impl Plugin for TodoTxtPlugin {
             Box::new(commands::TodoTable),
             Box::new(commands::TodoAdd),
             Box::new(commands::TodoList),
+            Box::new(commands::TodoRm),
         ]
     }
 }

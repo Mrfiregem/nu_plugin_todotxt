@@ -40,9 +40,9 @@ impl PluginCommand for TodoList {
         let show_all = call.has_flag("all")?;
         let todo_file = get_todo_file_contents::<Simple>(call)?;
 
-        for task in todo_file.tasks {
+        for (idx, task) in todo_file.tasks.into_iter().enumerate() {
             if show_all || !task.finished {
-                println!("{}", task);
+                println!("{}: {task}", idx);
             }
         }
         Ok(PipelineData::Empty)

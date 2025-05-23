@@ -72,7 +72,10 @@ where
     T: Task + Display,
 {
     let file_path = get_todo_file_path(call)?;
-    let mut file = std::fs::OpenOptions::new().write(true).open(file_path)?;
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open(file_path)?;
 
     for task in task_list.tasks {
         writeln!(file, "{}", task).map_err(TodoPluginError::from)?;
