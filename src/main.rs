@@ -1,5 +1,6 @@
 use nu_plugin::{MsgPackSerializer, Plugin, PluginCommand};
 
+mod error;
 mod util;
 
 mod commands;

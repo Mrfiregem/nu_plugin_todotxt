@@ -878,6 +878,7 @@ dependencies = [
  "nu-plugin",
  "nu-protocol",
  "serde_json",
+ "thiserror 2.0.12",
  "todo-txt",
 ]
 

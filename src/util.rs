@@ -1,24 +1,24 @@
 use std::{path::PathBuf, str::FromStr};
 
-use nu_protocol::{LabeledError, Value};
+use nu_plugin::EvaluatedCall;
+use nu_protocol::Value;
 use serde_json::Value as JsonValue;
 use todo_txt::{Task, task::List};
 
+use crate::error::TodoPluginError;
+
 /// Get the path to the user's todo.txt file
-pub fn get_todo_file_path(call: &nu_plugin::EvaluatedCall) -> Result<PathBuf, LabeledError> {
+pub fn get_todo_file_path(call: &EvaluatedCall) -> Result<PathBuf, TodoPluginError> {
     match call.get_flag::<std::path::PathBuf>("file")? {
         Some(path) => Ok(path),
         None => dirs::home_dir()
-            .ok_or_else(|| {
-                LabeledError::new("Could not find home directory")
-                    .with_code("todotxt::fs::missing_home_dir")
-            })
+            .ok_or(TodoPluginError::MissingHomeDirectory)
             .map(|x| x.join("todo.txt")),
     }
 }
 
 /// Read the todo.txt file specified in the call and return it as a JSON object
-pub fn get_todo_file_contents<T>(call: &nu_plugin::EvaluatedCall) -> Result<List<T>, LabeledError>
+pub fn get_todo_file_contents<T>(call: &EvaluatedCall) -> Result<List<T>, TodoPluginError>
 where
     T: Task,
 {
@@ -26,17 +26,12 @@ where
 
     // If the file doesn't exist, create it
     if !file_path.exists() {
-        std::fs::File::create(&file_path).map_err(|e| {
-            LabeledError::new(format!("Could not create file: {}", e))
-                .with_code("todotxt::fs::could_not_create")
-        })?;
+        std::fs::File::create(&file_path)?;
     }
 
-    let contents = std::fs::read_to_string(file_path)
-        .map_err(|e| LabeledError::new(format!("Error readinf file: {e}")))?;
+    let contents = std::fs::read_to_string(file_path)?;
 
-    todo_txt::task::List::from_str(&contents)
-        .map_err(|_| LabeledError::new("failed to parse todo.txt file contents"))
+    Ok(todo_txt::task::List::from_str(&contents).expect("reached infallable error"))
 }
 
 /// Convert a serde_json::Value to a nu_protocol::Value
