@@ -871,7 +871,7 @@ dependencies = [
 
 [[package]]
 name = "nu_plugin_todotxt"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "chrono",
  "dirs 6.0.0",
