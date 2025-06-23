@@ -1,10 +1,9 @@
-use nu_plugin::{MsgPackSerializer, Plugin, PluginCommand};
+use nu_plugin::{MsgPackSerializer, Plugin, PluginCommand, serve_plugin};
 
 mod error;
 mod util;
 
 mod commands;
-pub use commands::*;
 
 pub struct TodoTxtPlugin;
 
@@ -24,5 +23,5 @@ impl Plugin for TodoTxtPlugin {
 }
 
 fn main() {
-    nu_plugin::serve_plugin(&TodoTxtPlugin, MsgPackSerializer);
+    serve_plugin(&TodoTxtPlugin, MsgPackSerializer);
 }

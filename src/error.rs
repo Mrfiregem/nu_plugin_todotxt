@@ -1,43 +1,35 @@
+use miette::Diagnostic;
 use nu_protocol::{LabeledError, ShellError};
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Diagnostic, Debug)]
 pub enum TodoPluginError {
     #[error("error modifying file: {0}")]
+    #[diagnostic(code(todotxt::error::std::io))]
     Io(#[from] std::io::Error),
     #[error("error from nushell code: {0}")]
-    Nushell(#[from] nu_protocol::LabeledError),
+    #[diagnostic(code(todotxt::error::nushell))]
+    Nushell(#[from] LabeledError),
     #[error("missing home directory")]
+    #[diagnostic(code(todotxt::error::missing_home_directory))]
     MissingHomeDirectory,
     #[error("no task ids given")]
+    #[diagnostic(code(todotxt::error::mising_index))]
     NoIndex,
     #[error("given id out of range")]
+    #[diagnostic(code(todotxt::error::index_out_of_range))]
     IndexOutOfRange,
-    #[error("unknown todotxt plugin error")]
+    #[error("unknown priority: {0}")]
+    #[diagnostic(code(todotxt::error::unknown_priority))]
+    UnknownPriority(char),
+    #[error("unknown todo.txt plugin error")]
+    #[diagnostic(code(todotxt::error::unknown))]
     Unknown,
 }
 
 impl From<TodoPluginError> for LabeledError {
     fn from(value: TodoPluginError) -> Self {
-        match value {
-            TodoPluginError::Nushell(labeled_error) => labeled_error,
-            TodoPluginError::Unknown => LabeledError::new("error encountered while running")
-                .with_code("todotxt::error::unknown")
-                .with_help("consider reporting this error on github"),
-            TodoPluginError::Io(error) => {
-                LabeledError::new(format!("encountered io error: {error}"))
-                    .with_code("todotxt::error::std::io")
-            }
-            TodoPluginError::MissingHomeDirectory => {
-                LabeledError::new("could not determine home directory location")
-                    .with_code("todotxt::error::missing_home_directory")
-            }
-            TodoPluginError::NoIndex => LabeledError::new("no task ids specified")
-                .with_code("todotxt::error::mising_index")
-                .with_help("read command help for expected signiture"),
-            TodoPluginError::IndexOutOfRange => LabeledError::new("given index is out of range")
-                .with_code("todotxt::error::index_out_of_range"),
-        }
+        Self::from_diagnostic(&value)
     }
 }
 

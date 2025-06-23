@@ -46,15 +46,9 @@ impl PluginCommand for TodoRm {
         let mut task_list = get_todo_file_contents::<Simple>(call)?;
         let dry_run = call.has_flag("dry-run")?;
 
-        // Error if no ids provided, or an id greater than the number of tasks exists
-        if ids.is_empty() {
-            return Err(TodoPluginError::NoIndex.into());
-        }
-        if !ids.iter().all(|i| *i < task_list.len()) {
-            return Err(TodoPluginError::IndexOutOfRange.into());
-        }
+        validate_ids(&ids, task_list.len())?;
 
-        // Loop over task list backwards, removing tasks with matching indexes
+        // Loop over the task list backwards, removing tasks with matching indexes
         let mut removals = Vec::new();
         for (idx, task) in task_list.tasks.iter().enumerate() {
             if ids.contains(&idx) {
@@ -65,7 +59,7 @@ impl PluginCommand for TodoRm {
             }
         }
 
-        // If not in dry-run mode, write changes to file
+        // If not in dry-run mode, write changes to the file
         if !dry_run {
             task_list = task_list
                 .iter()
@@ -78,4 +72,15 @@ impl PluginCommand for TodoRm {
 
         Ok(PipelineData::Empty)
     }
+}
+
+/// Error if no ids provided, or an id greater than the number of tasks exists
+fn validate_ids(ids: &[usize], list_size: usize) -> Result<(), TodoPluginError> {
+    if ids.is_empty() {
+        return Err(TodoPluginError::NoIndex);
+    }
+    if !ids.iter().all(|i| *i < list_size) {
+        return Err(TodoPluginError::IndexOutOfRange);
+    }
+    Ok(())
 }

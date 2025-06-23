@@ -4,6 +4,7 @@ use nu_plugin::PluginCommand;
 use nu_protocol::{LabeledError, PipelineData, SyntaxShape, Type};
 use todo_txt::task::Simple;
 
+use crate::error::TodoPluginError;
 use crate::util::write_tasks_to_disk;
 use crate::{TodoTxtPlugin, util::get_todo_file_contents};
 
@@ -54,7 +55,7 @@ impl PluginCommand for TodoAdd {
     ) -> Result<PipelineData, LabeledError> {
         // Create todo item from string
         let task_str = build_task_string(call)?;
-        let new_task = Simple::from_str(&task_str).expect("reached infallable code");
+        let new_task = Simple::from_str(&task_str).expect("reached infallible code");
 
         let mut task_list = get_todo_file_contents::<Simple>(call)?;
         task_list.push(new_task);
@@ -80,12 +81,9 @@ fn build_task_string(call: &nu_plugin::EvaluatedCall) -> Result<String, LabeledE
     }
     if let Some(prio) = priority {
         let prio = match prio.to_ascii_uppercase() {
-            c if c.is_ascii_alphabetic() => c,
-            e => {
-                return Err(LabeledError::new(format!("unknown priority: {}", e))
-                    .with_code("todotxt::error::add::unknown_priority"));
-            }
-        };
+            c if c.is_ascii_alphabetic() => Ok(c),
+            e => Err(TodoPluginError::UnknownPriority(e)),
+        }?;
         todo_str.push_str(&format!("({prio}) "));
     }
     if !no_date {

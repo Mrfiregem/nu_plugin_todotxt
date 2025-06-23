@@ -33,7 +33,7 @@ where
 
     let contents = std::fs::read_to_string(file_path)?;
 
-    Ok(todo_txt::task::List::from_str(&contents).expect("reached infallable error"))
+    Ok(List::from_str(&contents).expect("reached infallible error"))
 }
 
 /// Convert a serde_json::Value to a nu_protocol::Value
@@ -78,7 +78,7 @@ where
         .open(file_path)?;
 
     for task in task_list.tasks {
-        writeln!(file, "{}", task).map_err(TodoPluginError::from)?;
+        writeln!(file, "{}", task)?;
     }
 
     Ok(())
